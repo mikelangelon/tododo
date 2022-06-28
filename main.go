@@ -12,15 +12,25 @@ type todo struct {
 }
 
 func main() {
+	s := store{filename: "todos.json"}
+	todos, err := s.GetToDos()
+	if err != nil {
+		handleError(err)
+	}
+
 	a := app.New()
 	w := a.NewWindow("Awesome TODO list")
 	w.Resize(fyne.NewSize(400, 500))
 
-	s := store{filename: "todos.json"}
-	myTodos, err := s.GetToDos()
-	if err != nil {
-		handleError(err)
-	}
+	list := widget.NewList(
+		func() int { return len(todos) },
+		func() fyne.CanvasObject {
+			return widget.NewLabel("ToDo item")
+		},
+		func(l widget.ListItemID, co fyne.CanvasObject) {
+			co.(*widget.Label).SetText(todos[l].Task)
+		},
+	)
 
 	task := widget.NewEntry()
 	task.SetPlaceHolder("Write task...")
@@ -30,8 +40,8 @@ func main() {
 			t := todo{
 				Task: task.Text,
 			}
-			myTodos = append(myTodos, t)
-			if err := s.SaveToDos(myTodos); err != nil {
+			todos = append(todos, t)
+			if err := s.SaveToDos(todos); err != nil {
 				handleError(err)
 			}
 
@@ -39,7 +49,12 @@ func main() {
 			task.Refresh()
 		}
 	})
-	w.SetContent(container.NewVBox(task, submit))
+	split := container.NewHSplit(
+		list,
+		container.NewVBox(task, submit),
+	)
+	split.SetOffset(0.4)
+	w.SetContent(split)
 
 	w.ShowAndRun()
 }
