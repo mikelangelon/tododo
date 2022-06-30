@@ -12,6 +12,7 @@ type todo struct {
 }
 
 func main() {
+	var selectedItem int
 	s := store{filename: "todos.json"}
 	todos, err := s.GetToDos()
 	if err != nil {
@@ -22,6 +23,16 @@ func main() {
 	w := a.NewWindow("Awesome TODO list")
 	w.Resize(fyne.NewSize(400, 500))
 
+	task := widget.NewEntry()
+	task.SetPlaceHolder("Write task...")
+
+	label := widget.NewLabel("Selected item")
+	label.Hidden = true
+
+	current := widget.NewEntry()
+	current.SetPlaceHolder("Write task...")
+	current.Hidden = true
+
 	list := widget.NewList(
 		func() int { return len(todos) },
 		func() fyne.CanvasObject {
@@ -31,9 +42,6 @@ func main() {
 			co.(*widget.Label).SetText(todos[l].Task)
 		},
 	)
-
-	task := widget.NewEntry()
-	task.SetPlaceHolder("Write task...")
 
 	submit := widget.NewButton("Submit", func() {
 		if task.Text != "" {
@@ -47,13 +55,38 @@ func main() {
 
 			task.Text = ""
 			task.Refresh()
+			list.Refresh()
 		}
 	})
-	split := container.NewHSplit(
-		list,
-		container.NewVBox(task, submit),
-	)
+
+	update := widget.NewButton("Update", func() {
+		todos[selectedItem].Task = current.Text
+		if err := s.SaveToDos(todos); err != nil {
+			handleError(err)
+		}
+
+		current.Text = ""
+		current.Refresh()
+		list.Refresh()
+	})
+	update.Hidden = true
+
+	form := container.NewVBox(task, submit, label, current, update)
+	split := container.NewHSplit(list, form)
 	split.SetOffset(0.4)
+
+	list.OnSelected = func(id widget.ListItemID) {
+		selectedItem = id
+		label.Hidden = false
+		current.Hidden = false
+		update.Hidden = false
+		current.Text = todos[id].Task
+
+		label.Refresh()
+		current.Refresh()
+		form.Refresh()
+
+	}
 	w.SetContent(split)
 
 	w.ShowAndRun()
