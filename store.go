@@ -11,16 +11,17 @@ type store struct {
 }
 
 func (s store) GetToDos() ([]todo, error) {
-	res, err := ioutil.ReadFile(s.filename)
+	todos, err := s.getToDos()
 	if err != nil {
 		return nil, err
 	}
-	var todos []todo
-	err = json.Unmarshal(res, &todos)
-	if err != nil {
-		return nil, err
+	var todosNotDone []todo
+	for _, v := range todos {
+		if v.DoneAt == nil {
+			todosNotDone = append(todosNotDone, v)
+		}
 	}
-	return todos, nil
+	return todosNotDone, nil
 }
 
 func (s store) SaveToDos(todos []todo) error {
@@ -33,4 +34,17 @@ func (s store) SaveToDos(todos []todo) error {
 		return err
 	}
 	return nil
+}
+
+func (s store) getToDos() ([]todo, error) {
+	res, err := ioutil.ReadFile(s.filename)
+	if err != nil {
+		return nil, err
+	}
+	var todos []todo
+	err = json.Unmarshal(res, &todos)
+	if err != nil {
+		return nil, err
+	}
+	return todos, nil
 }
